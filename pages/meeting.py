@@ -2,12 +2,15 @@
 import streamlit as st
 import uuid
 import importlib
-import graphs
+from pages import graphs
 
 def render_meeting():
     st.set_page_config(page_title="실시간 AI 회의실", layout="wide")
 
-    app = st.session_state.compiled_graph
+    if st.session_state.get("compiled_graph", False):
+        app = st.session_state.compiled_graph
+    else:
+        st.write("graph 생성을 해주세요.")
 
     # 고유한 회의 방 번호(thread_id) 생성 (메모리 추적용)
     if "thread_id" not in st.session_state:
