@@ -1,5 +1,5 @@
 import streamlit as st
-
+import uuid
 import json
 import os
 
@@ -25,7 +25,8 @@ def save_work_to_file(work_id):
         "messages": st.session_state.get("messages", []),
         "nodes": st.session_state.get("nodes", []),
         "normal_edges": st.session_state.get("normal_edges", []),
-        "cond_edges": st.session_state.get("cond_edges", [])
+        "cond_edges": st.session_state.get("cond_edges", []),
+        "graphs": st.session_state.get("graphs", {})
     }
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
@@ -38,8 +39,7 @@ def load_work_from_file(work_id):
             data = json.load(f)
             st.session_state.agent_registry = data.get("agent_registry", {})
             st.session_state.messages = data.get("messages", [])
-            st.session_state.nodes = data.get("nodes", [])
-            st.session_state.edges = data.get("edges", [])
+            st.session_state.graphs = data.get("graphs", [])
             st.session_state.current_work_id = work_id
 
 # =====================================
@@ -47,11 +47,25 @@ def load_work_from_file(work_id):
 # =====================================
 if "current_work_id" not in st.session_state:
     st.session_state.current_work_id = None
-
-
+if "agent_registry" not in st.session_state:
+    st.session_state.agent_registry = {}
+if "graphs" not in st.session_state:
+    st.session_state.graphs = {}
+if "meeting_status" not in st.session_state:
+    st.session_state.meeting_status = "idle"
+if "thread_id" not in st.session_state:
+    st.session_state.thread_id = str(uuid.uuid4())
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "inputs" not in st.session_state:
+    st.session_state.inputs = {}
+if "user_input" not in st.session_state:
+    st.session_state.user_input = ""
 # =====================================
 # 3. 화면 렌더링
 # =====================================
+
+st.set_page_config(page_title="실시간 AI 회의실", layout="wide")
 
 # CASE 1: 대시보드 (파일 목록 보기 및 생성)
 if st.session_state.current_work_id is None:
