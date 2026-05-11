@@ -11,7 +11,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 
 from langgraph.checkpoint.memory import MemorySaver
 
-# 0. llm 호출
+# --- llm 호출 ---
 @st.cache_resource
 def get_llm():
     from dotenv import load_dotenv
@@ -20,13 +20,11 @@ def get_llm():
     return GoogleGenerativeAI(model="gemini-2.5-flash")
 llm = get_llm()
 
-
-# 1. AgentState 및 초기화 함수 정의
+# --- AgentState 및 초기화 함수 ---
 class TaskStep(TypedDict):
     total_seq: int
     agent_role: str
     role_seq: int
-    # output_summary: str
 
 class BaseAgentState(TypedDict):
     curr_seq: int
@@ -37,8 +35,8 @@ class BaseAgentState(TypedDict):
 
 def initiate_state():
     new_annotations = dict(get_type_hints(BaseAgentState))
-    for registry in st.session_state.agent_registry.values():
-        requirements = registry.get("requirements", [])
+    for agent_data in st.session_state.agents.values():
+        requirements = agent_data.get("requirements", [])
         if requirements:
             for req in requirements:
                 key = req.get("key")
@@ -51,17 +49,17 @@ def initiate_state():
 def get_initial_state():
     return {
         "curr_seq": 0,
-        "task_seq": {task_name: 0 for task_name in st.session_state.agent_registry.keys()},
+        "task_seq": {agent: 0 for agent in st.session_state.agents.keys()},
         "curr_agent": "",
         "prev_agent": "",
         "task_history": [],
-        "latest_raw_output": ""
+        "latest_raw_output": []
     }
 
-# 2. Agent 작업 함수 정의 
-def call_task(task_name, state) -> dict:
+# --- Agent 작업 함수 ---
+def call_agent(agent, state) -> dict:
     # 1) 설정 불러오기
-    config = st.session_state.agent_registry[task_name]
+    config = st.session_state.agents[agent]
 
     # 2) 프롬프트 준비
     prompt = ChatPromptTemplate.from_messages([
@@ -92,13 +90,13 @@ def call_task(task_name, state) -> dict:
         updates.update(action_updates)
 
     updates["prev_agent"] = state["curr_agent"]
-    updates["curr_agent"] = task_name
+    updates["curr_agent"] = agent
     updates.update(config.get("static_returns", {}))
 
     return updates
 
 
-# 3. 그래프 빌드 함수
+# ---- 그래프 빌드 함수 ----
 def build_langgraph(graph):
 
     # 1. 그래프 초기화
@@ -107,8 +105,7 @@ def build_langgraph(graph):
     
     # 2. 노드 추가
     for node_name in graph["nodes"]:
-        # 각 노드가 실행될 때 자신의 이름을 call_task에 전달하도록 람다/부분함수 구성
-        workflow.add_node(node_name, lambda state, name=node_name: call_task(name, state))
+        workflow.add_node(node_name, lambda state, name=node_name: call_agent(name, state))
 
     # 3. 일반 엣지 추가
     for start, end in graph["normal_edges"]:
@@ -116,7 +113,7 @@ def build_langgraph(graph):
         target = END if end == "__END__" else end
         workflow.add_edge(start, target)
         if start == START:
-            st.session_state.start_task = target
+            st.session_state.temps["start_task"] = target
 
     # 4. 조건부 엣지 추가
     cond_map = defaultdict(lambda: defaultdict(dict))

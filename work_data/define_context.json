@@ -1,0 +1,30 @@
+{
+    "agent_registry": {},
+    "messages": [],
+    "nodes": [],
+    "normal_edges": [],
+    "cond_edges": [],
+    "graphs": {
+        "create_contents": {
+            "nodes": [
+                "worker",
+                "advisor"
+            ],
+            "normal_edges": [
+                [
+                    "__START__",
+                    "worker"
+                ],
+                [
+                    "advisor",
+                    "worker"
+                ],
+                [
+                    "worker",
+                    "advisor"
+                ]
+            ],
+            "cond_edges": []
+        }
+    }
+}

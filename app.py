@@ -1,10 +1,8 @@
 import streamlit as st
-import uuid
 import json
 import os
 
 from pages import agents, graphs, meeting
-import importlib
 
 # =====================================
 # 1. 파일 시스템 설정 
@@ -13,62 +11,59 @@ DATA_DIR = "work_data"
 if not os.path.exists(DATA_DIR):
     os.makedirs(DATA_DIR)
 
-def get_all_work_files():
+def get_works():
     """저장된 모든 작업 파일 목록을 가져옴"""
     return [f.replace(".json", "") for f in os.listdir(DATA_DIR) if f.endswith(".json")]
 
-def save_work_to_file(work_id):
+def save_work_to_file(work):
     """현재 세션 상태를 파일에 저장"""
-    file_path = os.path.join(DATA_DIR, f"{work_id}.json")
+    file_path = os.path.join(DATA_DIR, f"{work}.json")
     data = {
-        "agent_registry": st.session_state.get("agent_registry", {}),
-        "messages": st.session_state.get("messages", []),
-        "nodes": st.session_state.get("nodes", []),
-        "normal_edges": st.session_state.get("normal_edges", []),
-        "cond_edges": st.session_state.get("cond_edges", []),
-        "graphs": st.session_state.get("graphs", {})
+        "agents": st.session_state.get("agents", {}),
+        "graphs": st.session_state.get("graphs", {}),
+        "threads": st.session_state.get("threads", {})
     }
     with open(file_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-def load_work_from_file(work_id):
+def load_work_from_file(work):
     """파일에서 데이터를 읽어 세션에 로드"""
-    file_path = os.path.join(DATA_DIR, f"{work_id}.json")
+    file_path = os.path.join(DATA_DIR, f"{work}.json")
     if os.path.exists(file_path):
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-            st.session_state.agent_registry = data.get("agent_registry", {})
-            st.session_state.messages = data.get("messages", [])
-            st.session_state.graphs = data.get("graphs", [])
-            st.session_state.current_work_id = work_id
+            st.session_state.current_work = work
+            st.session_state.agents = data.get("agents", {})
+            st.session_state.graphs = data.get("graphs", {})
+            st.session_state.threads = data.get("threads", {})
 
 # =====================================
 # 2. 전역 상태 초기화
 # =====================================
-if "current_work_id" not in st.session_state:
-    st.session_state.current_work_id = None
-if "agent_registry" not in st.session_state:
-    st.session_state.agent_registry = {}
-if "graphs" not in st.session_state:
-    st.session_state.graphs = {}
-if "meeting_status" not in st.session_state:
-    st.session_state.meeting_status = "idle"
-if "thread_id" not in st.session_state:
-    st.session_state.thread_id = str(uuid.uuid4())
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "inputs" not in st.session_state:
-    st.session_state.inputs = {}
-if "user_input" not in st.session_state:
-    st.session_state.user_input = ""
+def initiate_state(target):
+    defaults = {
+        "current_work": "",
+        "threads": {},
+        "agents": {},
+        "graphs": {},
+        "temps": {}
+    }
+    for key, val in defaults.items():
+        if target == "all":
+            st.session_state[key] = val
+        else:
+            if key not in st.session_state:
+                st.session_state[key] = val
+
 # =====================================
 # 3. 화면 렌더링
 # =====================================
-
 st.set_page_config(page_title="실시간 AI 회의실", layout="wide")
 
 # CASE 1: 대시보드 (파일 목록 보기 및 생성)
-if st.session_state.current_work_id is None:
+if not st.session_state.get("current_work"):
+    initiate_state("rerun")
+
     st.title("🗂️ 프로젝트 매니저")
     
     # 새 작업 생성
@@ -77,16 +72,12 @@ if st.session_state.current_work_id is None:
         if st.button("생성"):
             if new_name:
                 # 초기 빈 파일 생성
-                st.session_state.agent_registry = {}
-                st.session_state.messages = []
                 save_work_to_file(new_name)
                 st.rerun()
-
     st.divider()
 
-    # 파일 목록 출력
     st.subheader("📁 저장된 작업 목록")
-    files = get_all_work_files()
+    files = get_works()
     if not files:
         st.info("저장된 파일이 없습니다.")
     else:
@@ -101,19 +92,13 @@ if st.session_state.current_work_id is None:
 
 # CASE 2: 작업 공간 (탭 UI)
 else:
-    # 상단 메뉴바
     c1, c2 = st.columns([7, 3])
-    c1.title(f"🚀 {st.session_state.current_work_id}")
+    c1.title(f"🚀 {st.session_state.current_work}")
     
-    # 수동 저장 버튼 (필요 시)
     if c2.button("💾 저장 후 나가기"):
-        save_work_to_file(st.session_state.current_work_id)
-        st.session_state.current_work_id = None
+        save_work_to_file(st.session_state.current_work)
+        initiate_state("all")
         st.rerun()
-
-    # 모듈 리로드 및 탭 렌더링
-    importlib.reload(agents)
-    importlib.reload(meeting)
     
     t1, t2, t3 = st.tabs(["Agents", "Graphs", "Meeting"])
     with t1:

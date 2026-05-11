@@ -1,0 +1,53 @@
+{
+    "threads": {
+        "회의1": {
+            "graph_name": "graph1",
+            "initial_input": {
+                "input1": "~~~",
+                "input2": "~~~"
+            },
+            "timestamp": "202601012359",
+            "config": {
+                "thread_id": "~~",
+                "recursion_limit": 8
+            }
+        },
+        "회의2": {
+            "graph_name": "graph1",
+            "initial_input": {
+                "input1": "~~~",
+                "input2": "~~~"
+            },
+            "timestamp": "202601012359",
+            "config": {
+                "thread_id": "~~",
+                "recursion_limit": 8
+            }
+        }
+    },
+    "agents": {
+        "worker": {
+            "system_prompt": "", 
+            "human_prompt": "", 
+            "output_mapping": "",
+            "schema": [], 
+            "static_returns": {},
+            "requirements": []
+        },
+        "advisor": {
+            "~~": "~~"
+        }
+    },
+    "graphs": {
+        "create_contents": {
+            "nodes": [],
+            "normal_edges": [],
+            "cond_edges": []
+        },
+        "questioning_content": {
+            "nodes": [],
+            "normal_edges": [],
+            "cond_edges": []
+        }
+    }
+}
